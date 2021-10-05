@@ -1,0 +1,12 @@
+{
+  "name": "lamport-otp-backend",
+  "version": "1.0.0",
+  "description": "Backend",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "md5": "^2.3.0"
+  }
+}
