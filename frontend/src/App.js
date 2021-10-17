@@ -3,7 +3,6 @@ import { Route, Redirect, useHistory } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
-import Register from "./pages/Register";
 
 export default function App() {
   const history = useHistory();
@@ -25,7 +24,6 @@ export default function App() {
           <Redirect to="/" />
         )}
       </Route>
-      {!loggedIn ? <Register /> : <Redirect to="/" />}
     </>
   );
 }

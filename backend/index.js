@@ -1,66 +1,42 @@
 const express = require("express");
 const cors = require("cors");
-const md5 = require("md5");
+const Cryptr = require("cryptr");
 const app = express();
 app.use(cors());
 app.use(express.json());
-const port = 5000;
+const port = 3001;
 
-const N = 10; //number of initial rounds
-let users = []; //array of registered users
+const KEY = "jkdsvhkldhvdlkvh";
+let session_key = null;
+let nonce = null;
 
-//function for hashing pasword N times
-const getInitialHash = (password) => {
-  let res = password;
-  for (var i = 0; i < N; i++) res = md5(res);
-  return res;
+const generateNonce = () => {
+  const generatedNonce = Math.floor(Math.random() * 1000000 + 1);
+  console.log("nonce", generatedNonce);
+  nonce = generatedNonce;
+  return generatedNonce;
 };
 
-//function of registering new user
-//stores username, N and password hashed N times in array
-const registerUser = (req, res) => {
-  const { username, password } = req.body;
-  const newUser = {
-    username: username,
-    round: N,
-    hash: getInitialHash(password),
-  };
-  users.push(newUser);
-  console.log(users);
-  res.send("User created!");
+const contact1 = (req, res) => {
+  const public_cryptr = new Cryptr(KEY);
+  const decrypted_req = JSON.parse(public_cryptr.decrypt(req.body.r_copy));
+  console.log(decrypted_req);
+  session_key = decrypted_req.session_key;
+  const session_cryptr = new Cryptr(decrypted_req.session_key);
+  const enc_res = session_cryptr.encrypt(generateNonce());
+  res.status(200).send(enc_res);
 };
 
-//function for step 1 for authenticating user
-//finds user in array from given username
-// and returns that user's round - 1 to client
-const loginUserStep1 = (req, res) => {
-  const user = users.find((user) => user.username === req.body.username);
-  if (user) res.status(200).json({ rounds: user.round - 1 });
-  else res.status(401).json({ error: "Invalid username" });
+const contact2 = (req, res) => {
+  const session_cryptr = new Cryptr(session_key);
+  const req_nonce = parseInt(session_cryptr.decrypt(req.body.nonce));
+  console.log("recieved nonce", req_nonce);
+  if (req_nonce === nonce - 1) res.status(200).send("Authorised!");
+  else res.status(401).send("Not Authorised!");
 };
 
-//function for step 2 for authenticating user
-//finds user in array from given username
-// and hashes given password 1 time and compares with user's hash
-// if matched, authenticates client, decrements round by 1, and sets hash
-// to given password
-const loginUserStep2 = (req, res) => {
-  const { username, password } = req.body;
-  const userIndex = users.findIndex((user) => user.username === username);
-  if (userIndex !== -1) {
-    if (md5(password) === users[userIndex].hash) {
-      users[userIndex].round -= 1;
-      users[userIndex].hash = password;
-      console.log(users);
-      res.status(200).json({ msg: "Authenticated!" });
-    } else res.status(401).json({ error: "Invalid password" });
-  } else res.status(401).json({ error: "Invalid username" });
-};
-
-//routing
-app.post("/register", registerUser);
-app.post("/login1", loginUserStep1);
-app.post("/login2", loginUserStep2);
+app.post("/contact1", contact1);
+app.post("/contact2", contact2);
 
 app.listen(port, () => {
   console.log(`Example app listening at http://localhost:${port}`);
